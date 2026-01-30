@@ -1,6 +1,8 @@
 name: elastic/elasticsearch
 
 on:
+  schedule:
+    - cron: '0 16 * * *'
   workflow_dispatch:
 
 env:
@@ -24,11 +26,10 @@ jobs:
         id: check
         run: |
           # 1. 获取上游最新版本
-          #LATEST_VERSION=$(curl -s https://api.github.com/repos/${{ env.UPSTREAM_ORG }}/${{ env.UPSTREAM_REPO }}/releases/latest | jq -r ".tag_name")
-          #echo "Latest upstream elasticsearch version: $LATEST_VERSION"
-          # 8.12.0 版本测试
-          LATEST_VERSION="v8.12.0"
-          echo "test v8.12.0"
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/${{ env.UPSTREAM_ORG }}/${{ env.UPSTREAM_REPO }}/releases/latest | jq -r ".tag_name")
+          echo "Latest upstream elasticsearch version: $LATEST_VERSION"
+          LATEST_VERSION=${LATEST_VERSION#v}
+          #LATEST_VERSION="8.12.0"
 
           # 2. 检查本仓库是否已存在该 Release
           if gh release view "$LATEST_VERSION" >/dev/null 2>&1; then

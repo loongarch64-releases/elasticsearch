@@ -21,7 +21,7 @@ prepare()
     local ZIP_FILE="$VERSION.zip"
     if [ ! -f "$ZIP_FILE" ]; then
         wget -O "$ZIP_FILE" --quiet --show-progress \
-            "https://github.com/$ORG/$PROJ/archive/refs/tags/$VERSION.zip"
+            "https://github.com/$ORG/$PROJ/archive/refs/tags/v$VERSION.zip"
     fi
     
     local SRC_DIR="$PROJ-${VERSION#v}"
