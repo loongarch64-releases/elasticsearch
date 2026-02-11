@@ -26,6 +26,7 @@ jobs:
           # 1. 获取上游最新版本
           #LATEST_VERSION=$(curl -s https://api.github.com/repos/${{ env.UPSTREAM_ORG }}/${{ env.UPSTREAM_REPO }}/releases/latest | jq -r ".tag_name")
           #echo "Latest upstream elasticsearch version: $LATEST_VERSION"
+          #LATEST_VERSION=${LATEST_VERSION#v}
           LATEST_VERSION="v8.12.0"
           echo "test v8.12.0"
 

@@ -2,9 +2,9 @@
 
 src=$1
 version=$2
-major=$(echo "$version" | cut -d. -f1)
-minor=$(echo "$version" | cut -d. -f2)
-patch=$(echo "$version" | cut -d. -f3)
+major_ver=$(echo "$version" | cut -d. -f1)
+minor_ver=$(echo "$version" | cut -d. -f2)
+patch_ver=$(echo "$version" | cut -d. -f3)
 
 echo "patching ..."
 
@@ -23,7 +23,7 @@ cat > insert_block.txt << 'EOF'
       }
     }  
 EOF
-if !([ "$major" -eq 7 ] && [ "$minor" -eq 17 ] && [ "$patch" -le 29 ] && [ "$patch" -ge 20 ] ); then
+if !([ "$major_ver" -eq 7 ] && [ "$minor_ver" -eq 17 ] && [ "$patch_ver" -le 29 ] && [ "$patch_ver" -ge 20 ] ); then
   sed -i "/repositories {/r insert_block.txt" "$src/settings.gradle"
 fi
 sed -i "/repositories {/r insert_block.txt" "$src/build-conventions/build.gradle"
@@ -53,24 +53,24 @@ EOF
 sed -i "/allprojects {/r insert_block.txt" "$src/build.gradle"
 rm -f insert_block.txt
 
-if [[ "$major" -eq 8 && ( "$minor" -eq 5 || ( "$minor" -eq 6 && "$patch" -le 1 )) ]]; then
+if [[ "$major_ver" -eq 8 && ( "$minor_ver" -eq 5 || ( "$minor_ver" -eq 6 && "$patch_ver" -le 1 )) ]]; then
     sed -i "s/e335c10679f743207d822c5f7948e930319835492575a9dba6b94f8a3b96fcc8/ef501d3052f08e697cb2430d355975270b2882c76f95cc78ddb9f1c69526b66d/" "$src/gradle/verification-metadata.xml"
     sed -i "s/42e020705692eddbd285e2b72ef0ff468f51a926382569c45f4e9cea4602ad1e/8b3e544c3c6fd66beeeadb21c17a32ff49a91662499b88573948e6f28b152992/" "$src/gradle/verification-metadata.xml"
     sed -i "s/d74a3334fb35195009b338a951f918203d6bbca3d1d359033dc33edd1cadc9ef/91e99c60c7fdccefa84fa33a3145d63b2edd812e15955069b9e330e7442740d1/" "$src/gradle/verification-metadata.xml"
 fi
 
 # SystemCallFilter 添加 loongarch 支持
-if [ "$major" -eq 8 ] && [ "$minor" -lt 16 ]; then
+if [ "$major_ver" -eq 8 ] && [ "$minor_ver" -lt 16 ]; then
     sed -i '/0xC00000B7/s/$/,/' "$src/server/src/main/java/org/elasticsearch/bootstrap/SystemCallFilter.java"
     sed -i '/0xC00000B7/a\
             "loongarch64",\
             new Arch(0xC0000102, 0xFFFFFFFF, 1079, 1071, 221, 281, 277)' "$src/server/src/main/java/org/elasticsearch/bootstrap/SystemCallFilter.java"
 fi
 
-if [ "$major" -lt 8 ]; then
-    sed -i '/0xC00000B7/a\
-	    m.put("loongarch64", new Arch(0xC00000B7, 0xFFFFFFFF, 1079, 1071, 221, 281, 277));' "$src/server/src/main/java/org/elasticsearch/bootstrap/SystemCallFilter.java"
-fi
+#if [ "$major_ver" -lt 8 ]; then
+#    sed -i '/0xC00000B7/a\
+#	    m.put("loongarch64", new Arch(0xC00000B7, 0xFFFFFFFF, 1079, 1071, 221, 281, 277));' "$src/server/src/main/java/org/elasticsearch/bootstrap/SystemCallFilter.java"
+#fi
 
 # 修改 server/src/main/java/org/elasticsearch/bootstrap/BootstrapChecks.java
 sed -i 's#if (isSystemCallFilterInstalled() == false)#if(isSystemCallFilterInstalled() == false \&\& !"loongarch64".equals(System.getProperty("os.arch")))#' "$src/server/src/main/java/org/elasticsearch/bootstrap/BootstrapChecks.java"
@@ -106,7 +106,7 @@ sed -i '/case "aarch64"/{
 }' "$src/build-tools/src/main/java/org/elasticsearch/gradle/Architecture.java"
 
 # 修改 distribution/build.gradle
-if [ "$major" -gt 8 ] || { [ "$major" -eq 8 ] && [ "$minor" -ge 13 ]; }; then
+if [ "$major_ver" -gt 8 ] || { [ "$major_ver" -eq 8 ] && [ "$minor_ver" -ge 13 ]; }; then
     sed -i '/if (os != null) {/{
     N
     /String platform/s/if (os != null)/if (os != null \&\& architecture != '\''loongarch64'\'')/
@@ -159,15 +159,15 @@ cat > insert_block.txt << 'EOF'
   if (dir.name == 'ml' && path.startsWith(':x-pack:plugin')) return
 EOF
 
-if [ "$major" -gt 8 ] || { [ "$major" -eq 8 ] && [ "$minor" -ge 11 ]; }; then
+if [ "$major_ver" -gt 8 ] || { [ "$major_ver" -eq 8 ] && [ "$minor_ver" -ge 11 ]; }; then
     echo "  if (dir.name == 'inference' && path.startsWith(':x-pack:plugin')) return" >> insert_block.txt
 fi
 
-if [ "$major" -gt 8 ] || { [ "$major" -eq 8 ] && [ "$minor" -ge 13 ]; }; then
+if [ "$major_ver" -gt 8 ] || { [ "$major_ver" -eq 8 ] && [ "$minor_ver" -ge 13 ]; }; then
    echo "  if (dir.name == 'consistency-checks' && path.startsWith(':x-pack:plugin:security:qa')) return" >> insert_block.txt
 fi
 
-if [ "$major" -gt 8 ] || { [ "$major" -eq 8 ] && [ "$minor" -ge 16 ]; }; then
+if [ "$major_ver" -gt 8 ] || { [ "$major_ver" -eq 8 ] && [ "$minor_ver" -ge 16 ]; }; then
     echo "  if (dir.name == 'esql' && path.startsWith(':x-pack:plugin')) return
   if (dir.name == 'rank-rrf' && path.startsWith(':x-pack:plugin')) return
   if (dir.name == 'amazon-ec2' && path.startsWith(':plugins:discovery-ec2:qa')) return
