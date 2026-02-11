@@ -29,7 +29,8 @@ jobs:
           LATEST_VERSION=$(curl -s https://api.github.com/repos/${{ env.UPSTREAM_ORG }}/${{ env.UPSTREAM_REPO }}/releases/latest | jq -r ".tag_name")
           echo "Latest upstream elasticsearch version: $LATEST_VERSION"
           LATEST_VERSION=${LATEST_VERSION#v}
-          #LATEST_VERSION="8.12.0"
+          # The highest version currently supported by CI
+          LATEST_VERSION="8.12.2"
 
           # 2. 检查本仓库是否已存在该 Release
           if gh release view "$LATEST_VERSION" >/dev/null 2>&1; then
