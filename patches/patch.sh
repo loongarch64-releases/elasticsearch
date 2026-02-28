@@ -10,18 +10,14 @@ echo "patching ..."
 
 # 配置 loongson MAVEN 环境
 cat > insert_block.txt << 'EOF'
-    exclusiveContent {
-      forRepository {
-        maven {
-          url "https://maven.loongnix.cn/loongarch/maven/"
-        }
-      }
-      filter {
+    maven {
+      url "https://maven.loongnix.cn/loongarch/maven/"
+      content {
         includeModule "net.java.dev.jna", "jna"
         includeModule "net.java.dev.jna", "jna-platform"
         includeModule "org.lz4", "lz4-java"
       }
-    }  
+    }
 EOF
 if !([ "$major_ver" -eq 7 ] && [ "$minor_ver" -eq 17 ] && [ "$patch_ver" -le 29 ] && [ "$patch_ver" -ge 20 ] ); then
   sed -i "/repositories {/r insert_block.txt" "$src/settings.gradle"
@@ -36,13 +32,9 @@ rm -f insert_block.txt
 
 cat > insert_block.txt << 'EOF'
   repositories {
-    exclusiveContent {
-      forRepository {
-        maven {
-          url "https://maven.loongnix.cn/loongarch/maven/"
-        }
-      }
-      filter {
+    maven {
+      url "https://maven.loongnix.cn/loongarch/maven/"
+      content {
         includeModule "net.java.dev.jna", "jna"
         includeModule "net.java.dev.jna", "jna-platform"
         includeModule "org.lz4", "lz4-java"
@@ -182,5 +174,30 @@ echo "org.gradle.dependency.verification=off" >> "$src/gradle.properties"
 
 # 删除 dockerx 项目
 rm -rf "$src/distribution/docker/"
+
+# 8.13.*适配
+if [ "$major_ver" -gt 8 ] || ([ "$major_ver" -eq 8 ] && [ "$minor_ver" -ge 13 ]); then
+    ElasticsearchJavaBasePlugin="$src/build-tools-internal/src/main/java/org/elasticsearch/gradle/internal/ElasticsearchJavaBasePlugin.java"
+    MrjarPlugin="$src/build-tools-internal/src/main/java/org/elasticsearch/gradle/internal/MrjarPlugin.java"
+
+    # 禁用jdk 21引入的警告[this-escape]
+    sed -i 's/compilerArgs.add("-Xlint:all/compilerArgs.add("-Xlint:all,-this-escape/' $ElasticsearchJavaBasePlugin
+    
+    # 对loongarch跳过toolchain的显式设置
+    sed -i "/package org.elasticsearch.gradle.internal;/a \\
+import org.elasticsearch.gradle.Architecture;" $ElasticsearchJavaBasePlugin
+    sed -i "/compileTask.getJavaCompiler/i \\
+            if (Architecture.current() != Architecture.LOONGARCH64) {" $ElasticsearchJavaBasePlugin
+    sed -i "/CompileOptions compileOptions/i \\
+            }" $ElasticsearchJavaBasePlugin
+
+    sed -i "/package org.elasticsearch.gradle.internal;/a \\
+import org.elasticsearch.gradle.Architecture;" $MrjarPlugin
+    sed -i "/compileTask.getJavaCompiler/i \\
+            if (Architecture.current() != Architecture.LOONGARCH64) {" $MrjarPlugin
+    sed -i "/set(javaToolchains.compilerFor/a \\
+            }" $MrjarPlugin
+fi
+
 
 echo "done"

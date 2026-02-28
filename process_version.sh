@@ -39,7 +39,12 @@ prepare()
 
 build()
 {
-    # 使用各版本支持的最高long-term运行时(ci目前最高支持到8.12.2，构建时均使用17)
+    # 8.13.*构建时使用21(之后需要>=22,待适配)，之前的版本默认17
+    if [ "$MAJOR_VER" -gt 8 ] || ([ "$MAJOR_VER" -eq 8 ] && [ "$MINOR_VER" -ge 13 ]); then
+	export PATH="/usr/lib/jvm/java-21-openjdk/bin:$PATH"
+    fi
+
+    # 运行时使用支持的最高long-term版本
     if [ "$MAJOR_VER" -lt 6 ] || ([ "$MAJOR_VER" -eq 6 ] && [ "$MINOR_VER" -le 4 ]); then
         JDK_VER=1.8.0
     elif [ "$MAJOR_VER" -lt 7 ] || ([ "$MAJOR_VER" -eq 7 ] && [ "$MINOR_VER" -le 14 ]); then

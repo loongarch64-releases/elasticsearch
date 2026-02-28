@@ -30,7 +30,7 @@ jobs:
           echo "Latest upstream elasticsearch version: $LATEST_VERSION"
           LATEST_VERSION=${LATEST_VERSION#v}
           # The highest version currently supported by CI
-          LATEST_VERSION="8.12.2"
+          LATEST_VERSION="8.13.4"
 
           # 2. 检查本仓库是否已存在该 Release
           if gh release view "$LATEST_VERSION" >/dev/null 2>&1; then

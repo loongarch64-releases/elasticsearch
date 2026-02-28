@@ -9,4 +9,4 @@ ENV PATH=/usr/lib/jvm/java-17-openjdk/bin:$PATH
 
 WORKDIR /workspace
 
-CMD ["bin/bash"]
+CMD ["/bin/bash"]
