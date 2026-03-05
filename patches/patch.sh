@@ -175,7 +175,7 @@ echo "org.gradle.dependency.verification=off" >> "$src/gradle.properties"
 # 删除 dockerx 项目
 rm -rf "$src/distribution/docker/"
 
-# 8.13.*适配
+# >= 8.13.0适配
 if [ "$major_ver" -gt 8 ] || ([ "$major_ver" -eq 8 ] && [ "$minor_ver" -ge 13 ]); then
     ElasticsearchJavaBasePlugin="$src/build-tools-internal/src/main/java/org/elasticsearch/gradle/internal/ElasticsearchJavaBasePlugin.java"
     MrjarPlugin="$src/build-tools-internal/src/main/java/org/elasticsearch/gradle/internal/MrjarPlugin.java"
@@ -183,7 +183,7 @@ if [ "$major_ver" -gt 8 ] || ([ "$major_ver" -eq 8 ] && [ "$minor_ver" -ge 13 ])
     # 禁用jdk 21引入的警告[this-escape]
     sed -i 's/compilerArgs.add("-Xlint:all/compilerArgs.add("-Xlint:all,-this-escape/' $ElasticsearchJavaBasePlugin
     
-    # 对loongarch跳过toolchain的显式设置
+    # 对loongarch绕过gradle的java toolchain
     sed -i "/package org.elasticsearch.gradle.internal;/a \\
 import org.elasticsearch.gradle.Architecture;" $ElasticsearchJavaBasePlugin
     sed -i "/compileTask.getJavaCompiler/i \\
@@ -197,7 +197,61 @@ import org.elasticsearch.gradle.Architecture;" $MrjarPlugin
             if (Architecture.current() != Architecture.LOONGARCH64) {" $MrjarPlugin
     sed -i "/set(javaToolchains.compilerFor/a \\
             }" $MrjarPlugin
-fi
+    
+    # >= 8.14.0 适配
+    if [ "$major_ver" -eq 8 ] && [ "$minor_ver" -ge 14 ]; then
+	# 使用 jna 5.13.0 (5.12.1需要Glibc 2.35)
+        sed -i "s/5.12.1/5.13.0/" "$src/build-tools-internal/version.properties"
 
+        # 去掉一些"警告"报错
+        sed -i 's/compilerArgs.add("-Werror");//' $ElasticsearchJavaBasePlugin
+        sed -i "s/-Xdoclint:all/-Xdoclint:none/" $ElasticsearchJavaBasePlugin 
+
+        # 模拟toolchain，处理使用了预览特性的任务:解决--release 与 javac 版本不一致的问题
+	echo "org.elasticsearch.loongarch.jdk21=/usr/lib/jvm/java-21-openjdk" >> "$src/gradle.properties"
+	echo "org.elasticsearch.loongarch.jdk23=/usr/lib/jvm/java-23-openjdk" >> "$src/gradle.properties"
+
+        sed -i '/compileOptions.getRelease()/i\
+            if (Architecture.current() == Architecture.LOONGARCH64) {\
+                JavaPluginExtension javaExt = project.getExtensions().getByType(JavaPluginExtension.class);\
+                for (SourceSet s : javaExt.getSourceSets()) {\
+                    if (s.getCompileJavaTaskName().equals(compileTask.getName())) {\
+                        compileOptions.setSourcepath(s.getJava().getSourceDirectories());\
+                        break;\
+                    }\
+                }\
+                compileOptions.setFork(true);\
+                String jdk21 = (String) project.findProperty("org.elasticsearch.loongarch.jdk21");\
+                String jdk23 = (String) project.findProperty("org.elasticsearch.loongarch.jdk23");\
+                if (compileTask.getName().contains("Main21")) {\
+                    compileOptions.getForkOptions().setJavaHome(new java.io.File(jdk21));\
+                } else {\
+                    compileOptions.getForkOptions().setJavaHome(new java.io.File(jdk23));\
+                }\
+            }' $ElasticsearchJavaBasePlugin #根据任务名判断目标 jdk,Main21使用jdk21，Main22使用jdk23(后续若有可用jdk22可去掉此步骤)
+	sed -i "s/compileOptions.getRelease().set(releaseVersionProviderFromCompileTask(project, compileTask));/compileOptions.getRelease().set(releaseVersionProviderFromCompileTask(project, compileTask).map(v -> { if (Architecture.current() == Architecture.LOONGARCH64) { if (v == 22) return 23; return v; } return v; }));/" $ElasticsearchJavaBasePlugin # 延迟设置 Release，将22改为23，且避免触发循环依赖(后续有可用jdk22可去掉此步骤)
+        sed -i "s/compileTask.getOptions().getRelease().set(releaseVersionProviderFromCompileTask(project, compileTask));/compileTask.getOptions().getRelease().set(releaseVersionProviderFromCompileTask(project, compileTask).map(v -> { if (Architecture.current() == Architecture.LOONGARCH64 \&\& v == 22) return 23; return v; }));/" $ElasticsearchJavaBasePlugin # 同上
+       
+	sed -i '/compileOptions.getRelease().set(javaVersion);/a\
+            }' $MrjarPlugin
+	sed -i '/compileOptions.getRelease().set(javaVersion);/i\
+            if (Architecture.current() == Architecture.LOONGARCH64) {\
+                compileOptions.setSourcepath(sourceSet.getJava().getSourceDirectories());\
+                compileOptions.setFork(true);\
+                String jdk21 = (String) project.findProperty("org.elasticsearch.loongarch.jdk21");\
+                String jdk23 = (String) project.findProperty("org.elasticsearch.loongarch.jdk23");\
+                if (javaVersion == 21) {\
+                    compileOptions.getForkOptions().setJavaHome(new java.io.File(jdk21));\
+                    compileOptions.getRelease().set(21);\
+                } else if (javaVersion == 22) {\
+                    compileOptions.getForkOptions().setJavaHome(new java.io.File(jdk23));\
+                    compileOptions.getRelease().set(23);\
+                } else {\
+                    compileOptions.getRelease().set(javaVersion);\
+                }\
+            } else {' $MrjarPlugin
+
+    fi
+fi
 
 echo "done"
