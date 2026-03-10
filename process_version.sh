@@ -38,18 +38,16 @@ prepare()
     "$PATCHES/patch.sh" "$SRCS/$SRC_DIR" "$VERSION"
 }
 
-build()
+process()
 {
     # 构建时
     if [ "$VER_NUM" -lt 8013000 ]; then
         JDK_BUILD=17
-    elif [ "$VER_NUM" -lt 8014000 ]; then
+    elif [ "$VER_NUM" -ge 8018000 ] && [ "$VER_NUM" -lt 9000000 ]; then
+    	echo "jdk 18/19/20 are required to handle preview features in current version"
+    	exit 1
+    else
 	JDK_BUILD=21
-    elif [ "$VER_NUM" -ge 8014000 ] && [ "$VER_NUM" -le 8015000 ]; then
-	echo "Must use JDK 22 because Gradle does not recognize higher versions of JDK"
-	exit 0
-    elif [ "$VER_NUM" -gt 8015000 ] && [ "$VER_NUM" -lt 8018000 ]; then
-	JDK_BUILD=23
     fi
     export PATH="/usr/lib/jvm/java-$JDK_BUILD-openjdk/bin:$PATH"
     
@@ -66,10 +64,11 @@ build()
         JDK_RUNTIME=21
     elif [ "$VER_NUM" -lt 8018000 ]; then # 8.13.* - 8.15.* 需要22，无可用，用23替代
 	JDK_RUNTIME=23
-    elif [ "$VER_NUM" -le 8018007 ]; then
-	JDK_RUNTIME=24
+    #elif [ "$VER_NUM" -le 8018007 ]; then
+    #	JDK_RUNTIME=24
     else
-	JDK_RUNTIME=25
+	# 配合Entitlements system回退到java安全管理器的补丁(后者在jdk24中已被移除)
+	JDK_RUNTIME=23
     fi
     pcustomjavahome="/usr/lib/jvm/java-$JDK_RUNTIME-openjdk"
     
@@ -79,24 +78,16 @@ build()
               -PcustomJavaHome=$pcustomjavahome
     
     popd > /dev/null
-}
 
-post_build()
-{
-    local TARGET_BASE="$SRCS/$PROJ-$VERSION/distribution/archives/linux-loongarch64-tar/build/install/"
-    local TARGET="elasticsearch-$VERSION-SNAPSHOT"
-    TAR="elasticsearch-$VERSION-linux-loongarch64.tar.gz"
-
-    rm -rf "$TARGET_BASE/$TARGET/modules/x-pack-ml"
-    
-    tar -C "$TARGET_BASE" -czf "$DISTS/$VERSION/$TAR" "$TARGET"
+    PRODUCT="$SRCS/$PROJ-$VERSION/distribution/archives/linux-loongarch64-tar/build/distributions/elasticsearch-$VERSION-SNAPSHOT-linux-loongarch64.tar.gz"
+    TAR="$DISTS/$VERSION/elasticsearch-$VERSION-linux-loongarch64.tar.gz"
+    mv $PRODUCT $TAR
 }
 
 main()
 {
     prepare
-    build
-    post_build
+    process
 }
 
 main "$@"
