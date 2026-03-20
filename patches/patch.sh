@@ -255,6 +255,8 @@ import org.elasticsearch.gradle.Architecture;" $MrjarPlugin
 	    # 模拟toolchain来处理使用预览特性的任务:解决--release 与 javac 版本不一致的问题(可用jdk限制，仅能处理部分版本)
             echo "org.elasticsearch.loongarch.jdk21=/usr/lib/jvm/java-21-openjdk" >> "$src/gradle.properties"
             echo "org.elasticsearch.loongarch.jdk23=/usr/lib/jvm/java-23-openjdk" >> "$src/gradle.properties"
+            echo "org.elasticsearch.loongarch.jdk24=/usr/lib/jvm/java-24-openjdk" >> "$src/gradle.properties"
+            echo "org.elasticsearch.loongarch.jdk25=/usr/lib/jvm/java-25-openjdk" >> "$src/gradle.properties"
 
             sed -i '/compileOptions.getRelease()/i\
             if (Architecture.current() == Architecture.LOONGARCH64) {\
@@ -268,10 +270,15 @@ import org.elasticsearch.gradle.Architecture;" $MrjarPlugin
                 compileOptions.setFork(true);\
                 String jdk21 = (String) project.findProperty("org.elasticsearch.loongarch.jdk21");\
                 String jdk23 = (String) project.findProperty("org.elasticsearch.loongarch.jdk23");\
+                String jdk24 = (String) project.findProperty("org.elasticsearch.loongarch.jdk24");\
                 String jdk25 = (String) project.findProperty("org.elasticsearch.loongarch.jdk25");\
 		String taskName = compileTask.getName();\
                 if (taskName.contains("Main22") || taskName.contains("Main23")) {\
                     compileOptions.getForkOptions().setJavaHome(new java.io.File(jdk23));\
+	        } else if (taskName.contains("Main25") || taskName.contains("Main26")) {\
+		    compileOptions.getForkOptions().setJavaHome(new java.io.File(jdk25));\
+	        } else if (taskName.contains("Main24")) {\
+		    compileOptions.getForkOptions().setJavaHome(new java.io.File(jdk24));\
                 } else {\
                     compileOptions.getForkOptions().setJavaHome(new java.io.File(jdk21));\
                 }\
@@ -279,6 +286,7 @@ import org.elasticsearch.gradle.Architecture;" $MrjarPlugin
             sed -i 's/compileOptions.getRelease().set(releaseVersionProviderFromCompileTask(project, compileTask));/compileOptions.getRelease().set(releaseVersionProviderFromCompileTask(project, compileTask).map(v -> { \
         if (Architecture.current() == Architecture.LOONGARCH64) { \
 	    if (v == 22) return 23; \
+            else if (v == 26) return 25; \
             return v; \
         } \
         return v; \
@@ -286,6 +294,7 @@ import org.elasticsearch.gradle.Architecture;" $MrjarPlugin
             sed -i 's/compileTask.getOptions().getRelease().set(releaseVersionProviderFromCompileTask(project, compileTask));/compileTask.getOptions().getRelease().set(releaseVersionProviderFromCompileTask(project, compileTask).map(v -> { \
 	if (Architecture.current() == Architecture.LOONGARCH64) { \
 	    if (v == 22) return 23; \
+	    else if (v == 26) return 25; \
 	    return v; \
 	} \
         return v; \
@@ -299,9 +308,14 @@ import org.elasticsearch.gradle.Architecture;" $MrjarPlugin
                 compileOptions.setFork(true);\
                 String jdk21 = (String) project.findProperty("org.elasticsearch.loongarch.jdk21");\
                 String jdk23 = (String) project.findProperty("org.elasticsearch.loongarch.jdk23");\
+		String jdk24 = (String) project.findProperty("org.elasticsearch.loongarch.jdk24");\
+                String jdk25 = (String) project.findProperty("org.elasticsearch.loongarch.jdk25");\
                 if (javaVersion == 22) {\
                     compileOptions.getForkOptions().setJavaHome(new java.io.File(jdk23));\
                     compileOptions.getRelease().set(23);\
+	        } else if (javaVersion == 26) {\
+	            compileOptions.getForkOptions().setJavaHome(new java.io.File(jdk25));\
+                    compileOptions.getRelease().set(25);\
                 } else {\
                     compileOptions.getRelease().set(javaVersion);\
                 }\
