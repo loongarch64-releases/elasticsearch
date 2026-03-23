@@ -2,6 +2,7 @@
 
 src=$1
 version=$2
+patches=$3
 major_ver=$(echo "$version" | cut -d. -f1)
 minor_ver=$(echo "$version" | cut -d. -f2)
 patch_ver=$(echo "$version" | cut -d. -f3)
@@ -161,60 +162,8 @@ sed -i \
 sed -i "$((start+6))r block.tmp" $file
 rm block.tmp
 
-# 删除直接或间接依赖 ml 的插件
-cat > insert_block << 'EOF'
-  if (dir.name == 'ml' && path.startsWith(':x-pack:plugin')) return;
-EOF
-
-if [ "$ver_num" -ge 8011000 ]; then
-    sed -i "/test-service-plugin/d" "$src/x-pack/plugin/inference/build.gradle"
-fi
-
-if [ "$ver_num" -ge 8012000 ]; then
-    echo "  if (dir.name == 'test-service-plugin' && path.startsWith(':x-pack:plugin:inference:qa')) return;" >> insert_block
-    sed -i "/test-service-plugin/d" "$src/x-pack/plugin/inference/qa/inference-service-tests/build.gradle"
-fi
-
-if [ "$ver_num" -ge 8016000 ]; then
-    echo "  if (dir.name == 'esql' && path.startsWith(':x-pack:plugin')) return;" >> insert_block
-    sed -i "s|'benchmarks',|//'benchmarks',|" "$src/settings.gradle"
-    sed -i '/clusterPlugins project(/,/)$/d' "$src/x-pack/plugin/inference/qa/mixed-cluster/build.gradle"
-    sed -i "/test-service-plugin/d" "$src/x-pack/plugin/rank-rrf/build.gradle"
-    sed -i "/:x-pack:plugin:esql/d" "$src/x-pack/plugin/security/qa/multi-cluster/build.gradle"
-    sed -i "/:x-pack:plugin:ml/d" "$src/x-pack/plugin/security/qa/multi-cluster/build.gradle"
-    sed -i "/'esql'/d" "$src/x-pack/plugin/security/qa/consistency-checks/build.gradle"
-fi
-
-if [ "$ver_num" -ge 8018000 ]; then
-    sed -i "/:x-pack:plugin:esql/d" "$src/test/external-modules/error-query/build.gradle"
-fi
-
-if [ "$ver_num" -ge 8019000 ] && [ "$ver_num" -lt 9000000 ]; then
-    sed -i "/test-service-plugin/d" "$src/x-pack/plugin/inference/qa/inference-with-security/build.gradle"
-fi
-
-if [ "$ver_num" -ge 8019003 ]; then
-    sed -i "/'ml'/d" "$src/x-pack/plugin/deprecation/qa/build.gradle"
-fi
-
-if [ "$ver_num" -ge 9001000 ]; then
-    sed -i "/:x-pack:plugin:inference:qa:test-service-plugin/d" "$src/x-pack/plugin/inference/qa/inference-with-security/build.gradle"
-fi
-
-if [ "$ver_num" -ge 9003000 ]; then
-    sed -i "/:x-pack:plugin:inference:qa:test-service-plugin/d" "$src/x-pack/plugin/security/qa/multi-cluster/build.gradle"
-fi
-
-if [ "$ver_num" -ge 9002000 ]; then
-    sed -i "/:x-pack:plugin:inference:qa:test-service-plugin/d" "$src/x-pack/plugin/inference/qa/multi-node/build.gradle"
-    sed -i "/'esql'/d" "$src/x-pack/plugin/downsample/build.gradle"
-    sed -i "/:x-pack:plugin:ml/d" "$src/x-pack/plugin/inference/build.gradle"
-fi
-
-sed -i "/void addSubProjects(String path, File dir) {/r insert_block" "$src/settings.gradle"
-rm -f insert_block
-
-echo "org.gradle.dependency.verification=off" >> "$src/gradle.properties"
+# 去除 ml 相关模块
+$patches/remove_ml.sh $src $ver_num
 
 # 删除 dockerx 项目
 sed -i "/'distribution:docker/d" "$src/settings.gradle"

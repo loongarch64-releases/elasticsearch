@@ -35,7 +35,7 @@ prepare()
     popd > /dev/null
 
     # patch
-    "$PATCHES/patch.sh" "$SRCS/$SRC_DIR" "$VERSION"
+    "$PATCHES/patch.sh" "$SRCS/$SRC_DIR" "$VERSION" "$PATCHES"
 }
 
 process()
