@@ -63,10 +63,10 @@ if [ "$ver_num" -ge 8000000 ] && [ "$ver_num" -lt 8016000 ]; then
             new Arch(0xC0000102, 0xFFFFFFFF, 1079, 1071, 221, 281, 277)' "$src/server/src/main/java/org/elasticsearch/bootstrap/SystemCallFilter.java"
 fi
 
-#if [ "$major_ver" -lt 8 ]; then
-#    sed -i '/0xC00000B7/a\
-#	    m.put("loongarch64", new Arch(0xC00000B7, 0xFFFFFFFF, 1079, 1071, 221, 281, 277));' "$src/server/src/main/java/org/elasticsearch/bootstrap/SystemCallFilter.java"
-#fi
+if [ "$major_ver" -lt 8 ]; then
+    sed -i '/0xC00000B7/a\
+	    m.put("loongarch64", new Arch(0xC0000102, 0xFFFFFFFF, 1079, 1071, 221, 281, 277));' "$src/server/src/main/java/org/elasticsearch/bootstrap/SystemCallFilter.java"
+fi
 
 # 修改 server/src/main/java/org/elasticsearch/bootstrap/BootstrapChecks.java
 sed -i 's#if (isSystemCallFilterInstalled() == false)#if(isSystemCallFilterInstalled() == false \&\& !"loongarch64".equals(System.getProperty("os.arch")))#' "$src/server/src/main/java/org/elasticsearch/bootstrap/BootstrapChecks.java"
