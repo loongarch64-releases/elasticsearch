@@ -125,6 +125,3 @@ echo "2. 修改了依赖的 Gradle 文件数量: ${#modified_gradle_files[@]}"
 for f in "${modified_gradle_files[@]}"; do echo "   - $f"; done
 echo "======================================"
 
-echo "org.gradle.dependency.verification=off" >> "$src/gradle.properties"
-
-
