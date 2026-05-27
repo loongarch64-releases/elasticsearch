@@ -107,8 +107,8 @@ universal_adaptation()
     ## 去掉 ml 插件以及 ml 相关模块
     #$patches/remove_ml.sh $src $ver_num
     ## 包含 ml 插件
-    local deps_zip="$src/ml-cpp-$version-deps.zip"
-    local nodeps_zip="$src/ml-cpp-$version-nodeps.zip"
+    local deps_zip="$src/../ml-cpp-$version-deps.zip"
+    local nodeps_zip="$src/../ml-cpp-$version-nodeps.zip"
     wget -O "$deps_zip" --quiet --show-progress "https://github.com/loongarch64-releases/ml-cpp/releases/download/v$version/ml-cpp-$version-deps.zip"
     wget -O "$nodeps_zip" --quiet --show-progress "https://github.com/loongarch64-releases/ml-cpp/releases/download/v$version/ml-cpp-$version-nodeps.zip"
     perl -i -0777 -pe 's/  nativeBundle\("org\.elasticsearch\.ml:ml-cpp:\$\{mlCppVersion\(\)\}:deps\@zip"\) \{\n    changing = true\n  \}\n  nativeBundle\("org\.elasticsearch\.ml:ml-cpp:\$\{mlCppVersion\(\)\}:nodeps\@zip"\) \{\n    changing = true\n  \}/  nativeBundle files("__ML_CPP_DEPS__")\n  nativeBundle files("__ML_CPP_NODEPS__")/g' "$src/x-pack/plugin/ml/build.gradle"
