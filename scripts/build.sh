@@ -56,7 +56,9 @@ build()
     echo "🔨 [Build] Compiling source code..."
 
     # 构建时版本配置
-    if [ "${VER_NUM}" -lt 8013000 ]; then
+    if [ "${VER_NUM}" -lt 7017000 ]; then
+	echo "The current version is not supported or has not been tested yet"
+    elif [ "${VER_NUM}" -lt 8013000 ]; then
         JDK_BUILD=17
     elif [ "${VER_NUM}" -ge 8018000 ] && [ "${VER_NUM}" -lt 9000000 ]; then
         echo "jdk 18/19/20 are required to handle preview features in current version"
@@ -79,19 +81,20 @@ build()
         JDK_RUNTIME=21
     elif [ "${VER_NUM}" -lt 8018000 ]; then # 8.13.* - 8.15.* 需要22，无可用，用23替代
         JDK_RUNTIME=23
-    #elif [ "${VER_NUM}" -le 8018007 ]; then
-    #   JDK_RUNTIME=24
-    else
-        # 配合 Entitlements system 回退到java安全管理器的补丁(后者在jdk24中已被移除)
-        JDK_RUNTIME=23
+    elif [[ "${VER_NUM}" -lt 8018008 || ( "${VER_NUM}" -ge 8019000 && "${VER_NUM}" -lt 8019006 ) ]]; then
+        JDK_RUNTIME=24
+    elif [[ "${VER_NUM}" -eq 8018008 || ( "${VER_NUM}" -ge 8019006 && "${VER_NUM}" -lt 8019015 ) ]]; then
+        JDK_RUNTIME=25
+    elif [ "${VER_NUM}" -ge 8019015 ]; then
+	JDK_RUNTIME=26
     fi
-    pcustomjavahome="/usr/lib/jvm/java-${JDK_RUNTIME}-openjdk"
+    bundled_jdk_home="/usr/lib/jvm/java-${JDK_RUNTIME}-openjdk"
 
     # 构建
     pushd "${SRCS}/${VERSION}"
     ./gradlew distribution:archives:linux-loongarch64-tar:assemble \
               --warning-mode=none \
-              -PcustomJavaHome="${pcustomjavahome}"
+	      -PloongarchBundledJdkHome="${bundled_jdk_home}"
     popd
 
 

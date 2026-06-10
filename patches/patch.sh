@@ -12,7 +12,7 @@ ver_num=$(( 10#$major_ver * 1000000 + 10#$minor_ver * 1000 + 10#$patch_ver ))
 # 配置 loongson MAVEN 环境
 maven_config()
 {
-    cat > insert_block << 'EOF'
+    cat > $patches/insert_block << 'EOF'
     maven {
       url "https://maven.loongnix.cn/loongarch/maven/"
       content {
@@ -24,17 +24,16 @@ maven_config()
     }
 EOF
     if [ "$ver_num" -lt 7017020 ] || [ "$ver_num" -gt 7017029 ]; then
-        sed -i "/repositories {/r insert_block" "$src/settings.gradle"
+        sed -i "/repositories {/r $patches/insert_block" "$src/settings.gradle"
     fi
-    sed -i "/repositories {/r insert_block" "$src/build-conventions/build.gradle"
-    sed -i "/repositories {/r insert_block" "$src/.ci/init.gradle"
-    sed -i "/repositories {/r insert_block" "$src/build-tools/build.gradle"
+    sed -i "/repositories {/r $patches/insert_block" "$src/build-conventions/build.gradle"
+    sed -i "/repositories {/r $patches/insert_block" "$src/.ci/init.gradle"
+    sed -i "/repositories {/r $patches/insert_block" "$src/build-tools/build.gradle"
     sed -i "/mavenCentral()/i //INSERT HEAD" "$src/build-tools-internal/build.gradle"
-    sed -i "/INSERT HEAD/r insert_block" "$src/build-tools-internal/build.gradle"
+    sed -i "/INSERT HEAD/r $patches/insert_block" "$src/build-tools-internal/build.gradle"
     sed -i "/INSERT HEAD/d" "$src/build-tools-internal/build.gradle"
-    rm -f insert_block
 
-    cat > insert_block << 'EOF'
+    cat > $patches/insert_block << 'EOF'
   repositories {
     maven {
       url "https://maven.loongnix.cn/loongarch/maven/"
@@ -47,9 +46,9 @@ EOF
     }
   }
 EOF
-    sed -i "/allprojects {/r insert_block" "$src/build.gradle"
-    rm -f insert_block
+    sed -i "/allprojects {/r $patches/insert_block" "$src/build.gradle"
 }
+
 
 # 各版本通用的处理步骤
 universal_adaptation()
@@ -114,7 +113,11 @@ universal_adaptation()
     perl -i -0777 -pe 's/  nativeBundle\("org\.elasticsearch\.ml:ml-cpp:\$\{mlCppVersion\(\)\}:deps\@zip"\) \{\n    changing = true\n  \}\n  nativeBundle\("org\.elasticsearch\.ml:ml-cpp:\$\{mlCppVersion\(\)\}:nodeps\@zip"\) \{\n    changing = true\n  \}/  nativeBundle files("__ML_CPP_DEPS__")\n  nativeBundle files("__ML_CPP_NODEPS__")/g' "$src/x-pack/plugin/ml/build.gradle"
     sed -i "s|__ML_CPP_DEPS__|$deps_zip|" "$src/x-pack/plugin/ml/build.gradle"
     sed -i "s|__ML_CPP_NODEPS__|$nodeps_zip|" "$src/x-pack/plugin/ml/build.gradle"
+
+    # bundled JKD：使用本地 jdk
+    $patches/bundled_jdk.sh $src
 }
+
 
 # 不同版本的适配处理
 multi_version_adaptation()
@@ -138,54 +141,19 @@ multi_version_adaptation()
 	    m.put("loongarch64", new Arch(0xC0000102, 0xFFFFFFFF, 1079, 1071, 221, 281, 277));' "$src/server/src/main/java/org/elasticsearch/bootstrap/SystemCallFilter.java"
     fi
 
-    # distribution/build.gradle
     if [ "$ver_num" -ge 8013000 ]; then
-        sed -i '/if (os != null) {/{
-    N
-    /String platform/s/if (os != null)/if (os != null \&\& architecture != '\''loongarch64'\'')/
-}' "$src/distribution/build.gradle"
-    else
-        sed -i 's#if (platform != null)#if (platform != null \&\& platform in excludePlatforms)#' "$src/distribution/build.gradle"
-    fi
+        local ElasticsearchJavaBasePlugin="$src/build-tools-internal/src/main/java/org/elasticsearch/gradle/internal/ElasticsearchJavaBasePlugin.java"
+	# 禁用jdk 21引入的警告[this-escape]
+        sed -i 's/compilerArgs.add("-Xlint:all/compilerArgs.add("-Xlint:all,-this-escape/' $ElasticsearchJavaBasePlugin
+        if [ "$ver_num" -ge 8014000 ]; then
+            # 使用 jna 5.13.0 (5.12.1是Glibc 2.35编的)
+            sed -i "s/5.12.1/5.13.0/" "$src/build-tools-internal/version.properties"
 
-    cat > insert_block << 'EOF'
-        if (architecture == 'loongarch64') {
-          // use local JDK from JAVA_HOME
-          def javaHome = project.findProperty('customJavaHome') ?: System.getenv('JAVA_HOME')
-          if (!javaHome) {
-            throw new GradleException("customJavaHome or JAVA_HOME must be set")
-          }
-          from(new File(javaHome)) {
-            exclude "demo/**"
-            eachFile { FileCopyDetails details ->
-              if (details.relativePath.segments[-2] == 'bin' || details.relativePath.segments[-1] == 'jspawnhelper') {
-                PERMISSION_SETTING
-              }
-              if (details.name == 'src.zip') {
-                details.exclude()
-              }
-            }
-          }
-        } else {
-EOF
-    if [ $ver_num -ge 8014002 ]; then
-        sed -i "s/PERMISSION_SETTING/details.permissions {\\
-                  unix(0755)\\
-                }\\
-              } else {\\
-                details.permissions {\\
-                  unix(0644)\\
-                }/" insert_block
-    else
-        sed -i "s/PERMISSION_SETTING/details.mode = 0755/" insert_block
+            # 去掉一些"警告"错误
+            sed -i 's/compilerArgs.add("-Werror");//' $ElasticsearchJavaBasePlugin
+            sed -i "s/-Xdoclint:all/-Xdoclint:none/" $ElasticsearchJavaBasePlugin
+        fi
     fi
-    sed -i "/return copySpec {/r insert_block" "$src/distribution/build.gradle"
-    rm -f insert_block
-
-    tac "$src/distribution/build.gradle" | \
-    sed "0,/if (details\\.name == 'src\\.zip') {/s//if (details.name == 'src.zip')/" | \
-    tac > "$src/distribution/build.gradle.tmp" && \
-    mv "$src/distribution/build.gradle.tmp" "$src/distribution/build.gradle"
 
     # 模拟 gradle java toolchain，以适应 es 的多版本 jdk 构建需求
     $patches/java_toolchain.sh $src $ver_num
@@ -199,6 +167,7 @@ patch()
     universal_adaptation
     multi_version_adaptation
     
+    rm $patches/insert_block
     echo "done"
 }
 
