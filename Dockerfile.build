@@ -1,7 +1,10 @@
 FROM lcr.loongnix.cn/library/debian:forky-slim
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates wget jq \
+ && apt-get install -y --no-install-recommends ca-certificates wget jq
+
+# 9.4.4 开始需要 jdk 27
+RUN apt-get install -y --no-install-recommends openjdk-27-jdk \
  && rm -rf /var/lib/apt/lists/*
 
 # 根据版本需求补充其它 jdk
@@ -15,17 +18,18 @@ RUN set -eux; \
       set -- $item; \
       version="$1"; \
       url="$2"; \
-      jvm_dir="/usr/lib/jvm/java-${version}-openjdk"; \
+      jvm_dir="/usr/lib/jvm/java-${version}-openjdk-loong64"; \
       mkdir -p "$jvm_dir"; \
       wget -O /tmp/openjdk.tar.gz "$url"; \
       tar -xzf /tmp/openjdk.tar.gz -C "$jvm_dir" --strip-components=1; \
       rm -f /tmp/openjdk.tar.gz; \
     done
 
-ENV RUNTIME_JAVA_HOME=/usr/lib/jvm/java-21-openjdk \
-    JDK21_HOME=/usr/lib/jvm/java-21-openjdk \
-    JDK23_HOME=/usr/lib/jvm/java-23-openjdk \
-    JDK25_HOME=/usr/lib/jvm/java-25-openjdk \
-    JDK26_HOME=/usr/lib/jvm/java-26-openjdk
+ENV RUNTIME_JAVA_HOME=/usr/lib/jvm/java-21-openjdk-loong64 \
+    JDK21_HOME=/usr/lib/jvm/java-21-openjdk-loong64 \
+    JDK23_HOME=/usr/lib/jvm/java-23-openjdk-loong64 \
+    JDK25_HOME=/usr/lib/jvm/java-25-openjdk-loong64 \
+    JDK26_HOME=/usr/lib/jvm/java-26-openjdk-loong64 \
+    JDK27_HOME=/usr/lib/jvm/java-27-openjdk-loong64
 
 CMD ["/bin/bash"]

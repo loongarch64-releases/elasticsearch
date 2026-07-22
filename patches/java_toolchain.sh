@@ -16,8 +16,7 @@ EOF
     sed -i '/toolchainVendor=ADOPTIUM/d' "$src/gradle/gradle-daemon-jvm.properties"
 
     # 系统设置对应变量，指向本地 jdk
-    sed -i 's/RUNTIME_JAVA_HOME/&,JDK17_HOME,JDK21_HOME,JDK23_HOME,JDK24_HOME,JDK25_HOME,JDK26_HOME/' "$src/gradle.properties"
-
+    sed -i 's/RUNTIME_JAVA_HOME/&,JDK17_HOME,JDK21_HOME,JDK23_HOME,JDK25_HOME,JDK26_HOME,JDK27_HOME/' "$src/gradle.properties"
     # 由于目前没有 jdk 22，所以让请求版本是 22 时返回 23
     sed -i 's/set(JavaLanguageVersion.of(javaVersion))/set(JavaLanguageVersion.of(toolchainVersionFor(javaVersion)))/' "$MrjarPlugin"
     sed -i '/private SourceSet addSourceSet/i\

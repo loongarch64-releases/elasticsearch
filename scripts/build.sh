@@ -66,7 +66,7 @@ build()
     else
         JDK_BUILD=21
     fi
-    export PATH="/usr/lib/jvm/java-${JDK_BUILD}-openjdk/bin:${PATH}"
+    export PATH="/usr/lib/jvm/java-${JDK_BUILD}-openjdk-loong64/bin:${PATH}"
 
     # 运行时版本配置
     if [ "${VER_NUM}" -le 6006004 ]; then
@@ -88,7 +88,7 @@ build()
     elif [ "${VER_NUM}" -ge 8019015 ]; then
 	JDK_RUNTIME=26
     fi
-    bundled_jdk_home="/usr/lib/jvm/java-${JDK_RUNTIME}-openjdk"
+    bundled_jdk_home="/usr/lib/jvm/java-${JDK_RUNTIME}-openjdk-loong64"
 
     # 构建
     pushd "${SRCS}/${VERSION}"
