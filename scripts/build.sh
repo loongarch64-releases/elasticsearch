@@ -69,26 +69,9 @@ build()
     export PATH="/usr/lib/jvm/java-${JDK_BUILD}-openjdk-loong64/bin:${PATH}"
 
     # 运行时版本配置
-    if [ "${VER_NUM}" -le 6006004 ]; then
-        JDK_RUNTIME=1.8.0
-    elif [ "${VER_NUM}" -le 7007014 ]; then
-        JDK_RUNTIME=11
-    elif [ "${VER_NUM}" -ge 7017014 ] && [ "${VER_NUM}" -lt 8000000 ]; then
-        JDK_RUNTIME=21
-    elif [ "${VER_NUM}" -le 8010002 ]; then
-        JDK_RUNTIME=17
-    elif [ "${VER_NUM}" -lt 8013000 ]; then
-        JDK_RUNTIME=21
-    elif [ "${VER_NUM}" -lt 8018000 ]; then # 8.13.* - 8.15.* 需要22，无可用，用23替代
-        JDK_RUNTIME=23
-    elif [[ "${VER_NUM}" -lt 8018008 || ( "${VER_NUM}" -ge 8019000 && "${VER_NUM}" -lt 8019006 ) ]]; then
-        JDK_RUNTIME=24
-    elif [[ "${VER_NUM}" -eq 8018008 || ( "${VER_NUM}" -ge 8019006 && "${VER_NUM}" -lt 8019015 ) ]]; then
-        JDK_RUNTIME=25
-    elif [ "${VER_NUM}" -ge 8019015 ]; then
-	JDK_RUNTIME=26
-    fi
-    bundled_jdk_home="/usr/lib/jvm/java-${JDK_RUNTIME}-openjdk-loong64"
+    JDK_BUNDLED=$(sed -n 's/^bundled_jdk *= *\([0-9]\+\).*/\1/p' \
+      "${SRCS}/${VERSION}/build-tools-internal/version.properties")
+    bundled_jdk_home="/usr/lib/jvm/java-${JDK_BUNDLED}-openjdk-loong64"
 
     # 构建
     pushd "${SRCS}/${VERSION}"
