@@ -1,6 +1,8 @@
 name: Auto Build elasticsearch (Self-hosted)
 
 on:
+  schedule:
+    - cron: '36 5 * * *'
   workflow_dispatch:
 
 env:
