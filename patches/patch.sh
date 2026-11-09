@@ -84,6 +84,23 @@ universal_adaptation()
    s/arm/loongarch/g
 }' "$src/build-tools/src/main/java/org/elasticsearch/gradle/Architecture.java"
 
+    # 9.5.6 新增的构建工具类也需要覆盖 Architecture.LOONGARCH64。
+    # 删除 distribution/docker 项目不会阻止 build-tools-internal 编译这些类。
+    for file in \
+        "$src/build-tools-internal/src/main/java/org/elasticsearch/gradle/internal/docker/DockerVariant.java" \
+        "$src/build-tools-internal/src/main/java/org/elasticsearch/gradle/internal/distribution/PackageMetadata.java"; do
+        [ -f "$file" ] || continue
+        sed -i '/case AARCH64 ->/{
+   h
+   p
+   x
+   s/AARCH64/LOONGARCH64/g
+   s/Aarch64/Loongarch64/g
+   s/aarch64/loongarch64/g
+   s/arm64/loong64/g
+}' "$file"
+    done
+
     # distribution/archives/build.gradle
     file="$src/distribution/archives/build.gradle"
     start=$(grep -n "linuxAarch64Tar" "$file" | cut -d: -f1)
