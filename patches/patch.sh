@@ -102,10 +102,7 @@ universal_adaptation()
     sed -i "/'distribution:docker/d" "$src/settings.gradle"
     rm -rf "$src/distribution/docker/"
 
-    # ml 插件处理
-    ## 去掉 ml 插件以及 ml 相关模块
-    #$patches/remove_ml.sh $src $ver_num
-    ## 包含 ml 插件
+    # ml 插件
     local deps_zip="$src/../ml-cpp-$version-deps.zip"
     local nodeps_zip="$src/../ml-cpp-$version-nodeps.zip"
     wget -O "$deps_zip" --quiet --show-progress "https://github.com/loongarch64-releases/ml-cpp/releases/download/v$version/ml-cpp-$version-deps.zip"
