@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 src=$1
 ver_num=$2
@@ -23,15 +24,16 @@ EOF
     private static int toolchainVersionFor(int javaVersion) {\
         return javaVersion == 22 ? 23 : javaVersion;\
     }' "$MrjarPlugin"
+    #  Java 22 源码关闭 preview
+    sed -i '/compileOptions.getCompilerArgs().add("--enable-preview")/c\
+            if (javaVersion != 22) {\
+                compileOptions.getCompilerArgs().add("--enable-preview");\
+            }' "$MrjarPlugin"
+    sed -i '/options.addBooleanOption("-enable-preview", true)/c\
+            if (javaVersion != 22) {\
+                options.addBooleanOption("-enable-preview", true);\
+            }' "$MrjarPlugin"
+    sed -i 's/options.addStringOption("-release", String.valueOf(compileReleaseVersionFor(javaVersion)))/options.addStringOption("-release", String.valueOf(javaVersion))/' "$MrjarPlugin"
 
-    # main 22 任务启用了 --enable-preview,release 必须与 javac 一致
-    # 所以除了映射 toolchain，还需要映射 release
-    sed -i 's/compileTask.setSourceCompatibility(Integer.toString(javaVersion))/compileTask.setSourceCompatibility(Integer.toString(compileReleaseVersionFor(javaVersion)))/' "$MrjarPlugin"
-    sed -i 's/compileOptions.getRelease().set(javaVersion)/compileOptions.getRelease().set(compileReleaseVersionFor(javaVersion))/' "$MrjarPlugin"
-    sed -i 's/options.addStringOption("-release", String.valueOf(javaVersion))/options.addStringOption("-release", String.valueOf(compileReleaseVersionFor(javaVersion)))/' "$MrjarPlugin"
-    sed -i '/private SourceSet addSourceSet/i\
-    private static int compileReleaseVersionFor(int javaVersion) {\
-        return javaVersion == 22 ? 23 : javaVersion;\
-    }' "$MrjarPlugin"
 fi
 

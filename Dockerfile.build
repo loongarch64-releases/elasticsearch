@@ -1,9 +1,9 @@
 FROM lcr.loongnix.cn/library/debian:forky-slim
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates wget jq
+ && apt-get install -y --no-install-recommends ca-certificates wget jq perl libzstd1
 
-# 9.4.4 开始需要 jdk 27 (需要清掉断链)
+# JDK 27 仍用于 main27 源码层的编译，与 bundled JDK 的选择无关 (需要清掉断链)
 RUN apt-get install -y --no-install-recommends openjdk-27-jdk \
  && find /usr/lib/jvm -xtype l -delete \
  && rm -rf /var/lib/apt/lists/*

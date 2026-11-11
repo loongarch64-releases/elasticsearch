@@ -58,6 +58,7 @@ build()
     # 构建时版本配置
     if [ "${VER_NUM}" -lt 7017000 ]; then
 	echo "The current version is not supported or has not been tested yet"
+        exit 1
     elif [ "${VER_NUM}" -lt 8013000 ]; then
         JDK_BUILD=17
     elif [ "${VER_NUM}" -ge 8018000 ] && [ "${VER_NUM}" -lt 9000000 ]; then
@@ -66,18 +67,25 @@ build()
     else
         JDK_BUILD=21
     fi
-    export PATH="/usr/lib/jvm/java-${JDK_BUILD}-openjdk-loong64/bin:${PATH}"
+    export JAVA_HOME="/usr/lib/jvm/java-${JDK_BUILD}-openjdk-loong64"
+    export PATH="${JAVA_HOME}/bin:${PATH}"
 
     # 运行时版本配置
     JDK_BUNDLED=$(sed -n 's/^bundled_jdk *= *\([0-9]\+\).*/\1/p' \
       "${SRCS}/${VERSION}/build-tools-internal/version.properties")
+    # server VM 目前最高只到 26
+    if [ "${JDK_BUNDLED}" -gt 26 ]; then
+        JDK_BUNDLED=26
+    fi
     bundled_jdk_home="/usr/lib/jvm/java-${JDK_BUNDLED}-openjdk-loong64"
+    export RUNTIME_JAVA_HOME="${bundled_jdk_home}"
 
     # 构建
     pushd "${SRCS}/${VERSION}"
     ./gradlew distribution:archives:linux-loongarch64-tar:assemble \
               --warning-mode=none \
-	      -PloongarchBundledJdkHome="${bundled_jdk_home}"
+              -PloongarchBundledJdkHome="${bundled_jdk_home}" \
+              -PloongarchBundledJdkMajor="${JDK_BUNDLED}"
     popd
 
 

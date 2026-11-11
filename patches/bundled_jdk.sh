@@ -1,6 +1,9 @@
 #!/bin/bash
+set -euo pipefail
 
 src=$1
+insert_block=$(mktemp)
+trap 'rm -f "$insert_block"' EXIT
 
 sed -i "s/List excludePlatforms = \[/&'linux-loongarch64', /" "$src/distribution/build.gradle"
 sed -i "/from project.jdks./i\\
@@ -10,7 +13,7 @@ sed -i "/from project.jdks./i\\
 sed -i "/from project.jdks./a\\
         }" "$src/distribution/build.gradle"
 
-cat << 'EOF' > $patches/insert_block
+cat << 'EOF' > "$insert_block"
     localBundledJdkHome = { Project project ->
       String propertyName = 'loongarchBundledJdkHome'
       Object propertyValue = project.findProperty(propertyName)
@@ -36,8 +39,8 @@ cat << 'EOF' > $patches/insert_block
         throw new GradleException("Bundled linux-loongarch64 JDK release file [${releaseFile}] is missing JAVA_VERSION")
       }
 
-      String expectedMajor = VersionProperties.bundledJdkVersion.split('[+.]')[0]
-      String actualMajor = javaVersion.startsWith('1.') ? javaVersion.split('\\.')[1] : javaVersion.split('\\.')[0]
+      String expectedMajor = project.findProperty('loongarchBundledJdkMajor')?.toString() ?: VersionProperties.bundledJdkVersion.split('[+.]')[0]
+      String actualMajor = javaVersion.startsWith('1.') ? javaVersion.split('[+.-]')[1] : javaVersion.split('[+.-]')[0]
       if (actualMajor != expectedMajor) {
         throw new GradleException(
           "Bundled linux-loongarch64 JDK at [${javaHome}] has major version [${actualMajor}], expected [${expectedMajor}]"
@@ -48,5 +51,5 @@ cat << 'EOF' > $patches/insert_block
     }
 EOF
 
-sed -i "/project.ext {/r $patches/insert_block" "$src/distribution/build.gradle"
+sed -i "/project.ext {/r $insert_block" "$src/distribution/build.gradle"
 
